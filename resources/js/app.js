@@ -1,4 +1,5 @@
 import "./bootstrap";
+import "livewire-sortable";
 
 window.blockEditor = function (params) {
     console.log({

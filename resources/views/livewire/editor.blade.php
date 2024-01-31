@@ -2,26 +2,33 @@
     <div class="h-10 border-b sticky top-0 bg-white z-10 flex-shrink-0">
         <div class="flex items-center justify-between h-full">
             <div></div>
-            <button class="bg-indigo-600 px-3 h-full text-white">
+            <button class="bg-indigo-600 px-3 h-full text-white" wire:click="handleSave">
                 Save
             </button>
         </div>
     </div>
 
-    <div class="w-full grid grid-cols-12 divide-x flex-1 h-full overflow-y-auto" x-data="blockEditor({hello2: 1})">
-
+    <div class="w-full grid grid-cols-12 divide-x flex-1 h-full overflow-y-auto" x-data="blockEditor()">
         <div class="col-span-9 p-6 h-full">
-            <div>
+            <div wire:sortable="handleSort">
                 @foreach($this->blocks as $key => $data)
-                <div wire:click="selectCurrentBlock('{{ $key }}')" data-id="{{ $key }}" @class(["group block
-                    relative", 'outline outline-dashed'=> $key===($this->currentBlock['id'] ?? null)])>
+                <div wire:click="selectCurrentBlock('{{ $key }}')" wire:sortable.item="{{ $key }}" wire:key="{{ $key }}"
+                    @class(["group block relative", 'outline outline-dashed'=> $key===($this->currentBlock['id'] ??
+                    null)])>
                     {!! view($this->getBlock($data['namespace'], 'edit'))->with($data)->render(); !!}
 
                     <div class="invisible group-hover:visible absolute right-0 top-0">
-                        <button wire:click="removeBlock('{{ $key }}')" class="text-white bg-black px-2 py-1">Remove</button>
+                        <button wire:click="removeBlock('{{ $key }}')"
+                            class="text-white bg-black px-2 py-1">Remove</button>
                     </div>
                 </div>
                 @endforeach
+
+                {{--
+                    @foreach($this->blocks as $key => $data)
+                    @livewire($this->getBlock($data['namespace']), ['data' => $data['data']], key($key))
+                    @endforeach
+                    --}}
             </div>
         </div>
 
@@ -32,7 +39,7 @@
             <div class="bg-white p-6 border-b">
                 {!! $this->currentBlock['namespace'] !!}
 
-                @foreach($this->editor['blocks'][$this->currentBlock['namespace']]['attributes'] as $key => $value)
+                @foreach($this->editor['blocks'][$this->currentBlock['namespace']]['data'] as $key => $value)
                 <div>
                     <label for="{{ $key }}">{{ $key }}</label>
                     <input type="text" id="{{ $key }}" value="{{ $this->getAttribute($key) }}"

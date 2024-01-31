@@ -15,24 +15,7 @@ class Editor extends Component
 
     public $currentBlock = '';
 
-    public $blocks = [
-        "block-001" => [
-            'namespace' => 'hero',
-            'attributes' => [
-                'heading_1'  => 'heading text',
-                'description'  => 'description',
-                'words'  => 'Hello,Chatbot'
-            ]
-        ],
-
-        "block-002" => [
-            'namespace' => 'heading',
-            'attributes' => [
-                'class' => 'text-2xl font-bold',
-                'text'  => 'Hello from heading block'
-            ]
-        ]
-    ];
+    public $blocks = [];
 
     public function mount()
     {
@@ -40,8 +23,8 @@ class Editor extends Component
             'blocks' => [
                 'hero' => [
                     'edit' => 'livewire.blocks.hero',
-                    'render' => '',
-                    'attributes' => [
+                    'render' => 'livewire.blocks.render.hero',
+                    'data' => [
                         'heading_1' => [
                             "type" => 'text',
                             'defaultValue' => 'Hello',
@@ -58,8 +41,8 @@ class Editor extends Component
                 ],
                 'paragraph' => [
                     'edit' => 'livewire.blocks.paragraph',
-                    'render' => '',
-                    'attributes' => [
+                    'render' => 'livewire.blocks.render.paragraph',
+                    'data' => [
                         'text' => [
                             "type" => 'text',
                             'defaultValue' => 'Hello',
@@ -72,8 +55,8 @@ class Editor extends Component
                 ],
                 'heading' => [
                     'edit' => 'livewire.blocks.heading',
-                    'render' => '',
-                    'attributes' => [
+                    'render' => 'livewire.blocks.heading',
+                    'data' => [
                         'text' => [
                             "type" => 'text',
                             'defaultValue' => 'Hello',
@@ -86,6 +69,43 @@ class Editor extends Component
                 ]
             ],
         ];
+
+        $this->blocks = [
+            "block-001" => [
+                'namespace' => 'paragraph',
+                'data' => [
+                    'class' => 'text-2xl font-bold',
+                    'text'  => 'Hello from paragraph block'
+                ]
+            ],
+
+            // "block-002" => [
+            //     'namespace' => 'heading',
+            //     'attributes' => [
+            //         'class' => 'text-2xl font-bold',
+            //         'text'  => 'Hello from heading block'
+            //     ]
+            // ],
+
+            // "block-003" => [
+            //     'namespace' => 'heading',
+            //     'attributes' => [
+            //         'class' => 'text-2xl font-bold',
+            //         'text'  => 'Hello from heading block'
+            //     ]
+            // ]
+        ];
+
+        $input = <<<TXT
+<!-- paragraph {"text":"Hello","class":"text-base text-blue-500"} -->
+
+<p class="text-base text-blue-500">Hello</p>
+
+<!--/ paragraph -->
+
+TXT;
+
+        $this->blocks = $this->parseBlocks($input);
 
         $this->selectCurrentBlock('block-001');
     }
@@ -108,11 +128,11 @@ class Editor extends Component
         return $this->editor['blocks'][$block][$type] ?? '';
     }
 
-    public function updateBlock($attributes)
+    public function updateBlock($data)
     {
         $this->blocks[$this->currentBlock['id']] = [
             'namespace' => $this->currentBlock['namespace'],
-            'attributes' => $attributes
+            'data' => $data
         ];
     }
 
@@ -125,14 +145,14 @@ class Editor extends Component
     public function setAttribute($key, $value)
     {
         $this->updateBlock([
-            ...$this->currentBlock['attributes'],
+            ...$this->currentBlock['data'],
             $key => $value
         ]);
     }
 
     public function getAttribute($key)
     {
-        return $this->currentBlock['attributes'][$key] ?? '';
+        return $this->currentBlock['data'][$key] ?? '';
     }
 
     // WIP
@@ -140,14 +160,14 @@ class Editor extends Component
     {
         $block = $this->editor['blocks'][$this->testBlock];
 
-        $attributes = [];
-        foreach ($block['attributes'] as $key => $value) {
-            $attributes[$key] = $value['defaultValue'] ?? 'Placeholder';
+        $data = [];
+        foreach ($block['data'] as $key => $value) {
+            $data[$key] = $value['defaultValue'] ?? 'Placeholder';
         }
 
         $this->blocks[Str::random(10)] = [
             'namespace' => $this->testBlock,
-            'attributes' => $attributes
+            'data' => $data
         ];
     }
     // WIP
@@ -156,5 +176,57 @@ class Editor extends Component
     public function render()
     {
         return view('livewire.editor');
+    }
+
+    public function handleSort($ids)
+    {
+        $newOrder = [];
+        foreach ($ids as $id) {
+            $blockId = $id['value'];
+            $newOrder[$blockId] = $this->blocks[$blockId];
+        }
+
+        $this->blocks = $newOrder;
+    }
+
+    public function parseBlocks($input)
+    {
+        $matches = [];
+        // Find all occurrences of the pattern in the input
+        preg_match_all('/<!-- (\w+) (\{.*\}) -->/', $input, $matches, PREG_SET_ORDER);
+
+        $parsedData = [];
+
+        foreach ($matches as $match) {
+            $namespace = $match[1];
+            $data = json_decode($match[2], true);
+
+            $parsedData[] = [
+                'namespace' => $namespace,
+                'data' => $data ?? []
+            ];
+        }
+
+        return $parsedData;
+    }
+
+    public function handleSave()
+    {
+        $output = '';
+        foreach ($this->blocks as $block) {
+            $namespace = $block['namespace'];
+            $data = $block['data'];
+
+            $dataString = json_encode($data);
+
+            $output .= "<!-- $namespace $dataString -->";
+            $output .= "\n";
+            $output .= view()->make($this->getBlock($namespace, 'render'), ['data' => $data]);
+            $output .= "<!-- /$namespace -->";
+            $output .= "\n";
+        }
+
+        dd($output);
+        return $output;
     }
 }

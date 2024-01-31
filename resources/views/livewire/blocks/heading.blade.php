@@ -1,1 +1,1 @@
-<h1 class="{{ $attributes['class'] }}">{{ $attributes['text'] }}</h1>
+<h1 class="{{ $data['class'] }}">{{ $data['text'] }}</h1>
